@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../providers/restaurant_provider.dart';
 import 'dart:ui';
+import 'dart:async';
 
 class DetailScreen extends StatefulWidget {
   const DetailScreen({super.key});
@@ -15,6 +18,8 @@ class _DetailScreenState extends State<DetailScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+  final Completer<GoogleMapController> _mapController = Completer();
+  Set<Marker> _markers = {};
 
   @override
   void initState() {
@@ -47,12 +52,58 @@ class _DetailScreenState extends State<DetailScreen>
     super.dispose();
   }
 
+  // 電話をかける関数
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    await _launchUrl(launchUri);
+  }
+
+  // 地図アプリを開く関数
+  Future<void> _openMap(
+    double latitude,
+    double longitude,
+    String address,
+  ) async {
+    final url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+    );
+    await _launchUrl(url);
+  }
+
+  // URLを開く共通関数
+  Future<void> _launchUrl(Uri url) async {
+    try {
+      if (!await launchUrl(url)) {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('アプリを起動できませんでした: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final restaurant = ModalRoute.of(context)!.settings.arguments as Restaurant;
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final textTheme = theme.textTheme;
+
+    // マーカーの設定
+    _markers = {
+      Marker(
+        markerId: MarkerId(restaurant.id),
+        position: LatLng(restaurant.latitude, restaurant.longitude),
+        infoWindow: InfoWindow(
+          title: restaurant.name,
+          snippet: restaurant.address,
+        ),
+      ),
+    };
 
     return Scaffold(
       body: Stack(
@@ -293,14 +344,30 @@ class _DetailScreenState extends State<DetailScreen>
                         ),
                         const SizedBox(height: 30),
 
+                        // 電話番号（あれば表示）
+                        if (restaurant.tel.isNotEmpty) ...[
+                          _buildInfoSection(
+                            context,
+                            icon: Icons.phone,
+                            title: '電話番号',
+                            content: restaurant.tel,
+                            theme: theme,
+                          ),
+                          const SizedBox(height: 30),
+                        ],
+
                         // 地図と位置情報
-                        _buildMapPreview(context, restaurant, theme),
+                        _buildMapSection(context, restaurant, theme),
                         const SizedBox(height: 30),
 
                         // アクションボタン
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: _buildActionButtons(context, theme),
+                          child: _buildActionButtons(
+                            context,
+                            restaurant,
+                            theme,
+                          ),
                         ),
 
                         const SizedBox(height: 48),
@@ -381,11 +448,16 @@ class _DetailScreenState extends State<DetailScreen>
     );
   }
 
-  Widget _buildMapPreview(
+  Widget _buildMapSection(
     BuildContext context,
     Restaurant restaurant,
     ThemeData theme,
   ) {
+    final LatLng restaurantLocation = LatLng(
+      restaurant.latitude,
+      restaurant.longitude,
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -419,7 +491,6 @@ class _DetailScreenState extends State<DetailScreen>
             height: 200,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.grey[200],
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -432,68 +503,38 @@ class _DetailScreenState extends State<DetailScreen>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Stack(
-                fit: StackFit.expand,
                 children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.map,
-                          size: 32,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '位置情報',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '緯度: ${restaurant.latitude.toStringAsFixed(6)}\n経度: ${restaurant.longitude.toStringAsFixed(6)}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
+                  // Google Map
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: restaurantLocation,
+                      zoom: 16,
+                    ),
+                    markers: _markers,
+                    onMapCreated: (GoogleMapController controller) {
+                      _mapController.complete(controller);
+                    },
+                    myLocationEnabled: false,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
                   ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 16,
-                      ),
-                      color: theme.colorScheme.primary.withOpacity(0.8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: Colors.white,
-                            size: 16,
+
+                  // タップ検出用のInkWell
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap:
+                          () => _openMap(
+                            restaurant.latitude,
+                            restaurant.longitude,
+                            restaurant.address,
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            '地図表示は準備中です',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                      splashColor: theme.colorScheme.primary.withOpacity(0.3),
+                      highlightColor: theme.colorScheme.primary.withOpacity(
+                        0.1,
                       ),
+                      child: Container(),
                     ),
                   ),
                 ],
@@ -505,21 +546,26 @@ class _DetailScreenState extends State<DetailScreen>
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, ThemeData theme) {
+  Widget _buildActionButtons(
+    BuildContext context,
+    Restaurant restaurant,
+    ThemeData theme,
+  ) {
+    // 電話番号を常に「0000000000」に設定
+    const String phoneNumber = "0000000000";
+
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('地図アプリとの連携は準備中です'),
-                  behavior: SnackBarBehavior.floating,
+            onPressed:
+                () => _openMap(
+                  restaurant.latitude,
+                  restaurant.longitude,
+                  restaurant.address,
                 ),
-              );
-            },
             icon: const Icon(Icons.map, size: 20),
             label: const Text(
               '地図で見る',
@@ -537,20 +583,13 @@ class _DetailScreenState extends State<DetailScreen>
           ),
         ),
 
+        // 電話ボタンを常に表示、常に「0000000000」を使用
         const SizedBox(height: 16),
-
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('電話機能は準備中です'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: () => _makePhoneCall(phoneNumber),
             icon: const Icon(Icons.phone, size: 20),
             label: const Text(
               '電話をかける',

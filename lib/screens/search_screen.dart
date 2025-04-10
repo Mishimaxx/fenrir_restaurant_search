@@ -91,10 +91,20 @@ class _SearchScreenState extends State<SearchScreen>
       return;
     }
 
+    final Map<int, int> radiusMap = {
+      1: 500,
+      2: 1000,
+      3: 2000,
+      4: 3000,
+      5: 5000,
+    };
+
+    final searchRadius = radiusMap[_radius.toInt()] ?? 2000;
+
     context.read<RestaurantProvider>().searchRestaurants(
       latitude: _currentPosition!.latitude,
       longitude: _currentPosition!.longitude,
-      radius: (_radius * 1000).round(), // メートル単位に変換
+      radius: searchRadius,
     );
 
     Navigator.pushNamed(context, '/results');
@@ -153,12 +163,10 @@ class _SearchScreenState extends State<SearchScreen>
                     ),
                     const SizedBox(height: 24),
 
-                    // 位置情報表示カード
                     if (_currentPosition != null) _buildLocationCard(),
 
                     const SizedBox(height: 24),
 
-                    // 検索半径設定カード
                     _buildRadiusCard(theme, textTheme),
 
                     const Spacer(),
@@ -230,6 +238,16 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Widget _buildRadiusCard(ThemeData theme, TextTheme textTheme) {
+    final Map<int, String> rangeDescriptionMap = {
+      1: '500m圏内',
+      2: '1km圏内',
+      3: '2km圏内',
+      4: '3km圏内',
+      5: '5km圏内',
+    };
+
+    final rangeDescription = rangeDescriptionMap[_radius.toInt()] ?? '2km圏内';
+
     return Card(
       elevation: 6,
       shadowColor: Colors.black.withOpacity(0.2),
@@ -279,7 +297,7 @@ class _SearchScreenState extends State<SearchScreen>
                 min: 1,
                 max: 5,
                 divisions: 4,
-                label: '${_radius.toInt()}km',
+                label: _radius.toInt().toString(),
                 onChanged: (value) {
                   setState(() => _radius = value);
                 },
@@ -293,18 +311,18 @@ class _SearchScreenState extends State<SearchScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildRadiusBadge(1, theme),
-                  _buildRadiusBadge(2, theme),
-                  _buildRadiusBadge(3, theme),
-                  _buildRadiusBadge(4, theme),
-                  _buildRadiusBadge(5, theme),
+                  _buildRadiusBadge(1, theme, '500m'),
+                  _buildRadiusBadge(2, theme, '1km'),
+                  _buildRadiusBadge(3, theme, '2km'),
+                  _buildRadiusBadge(4, theme, '3km'),
+                  _buildRadiusBadge(5, theme, '5km'),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
             Text(
-              '現在の設定: ${_radius.toInt()}km圏内',
+              '現在の設定: $rangeDescription',
               style: textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.primary,
@@ -316,24 +334,36 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
-  Widget _buildRadiusBadge(int value, ThemeData theme) {
+  Widget _buildRadiusBadge(int value, ThemeData theme, String label) {
     final isSelected = _radius.toInt() == value;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? theme.colorScheme.primary : Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: theme.colorScheme.primary, width: 2),
-      ),
-      child: Text(
-        '$value',
-        style: TextStyle(
-          color: isSelected ? Colors.white : theme.colorScheme.primary,
-          fontWeight: FontWeight.bold,
+    return Column(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.colorScheme.primary, width: 2),
+          ),
+          child: Text(
+            value.toString(),
+            style: TextStyle(
+              color: isSelected ? Colors.white : theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: isSelected ? theme.colorScheme.primary : Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 

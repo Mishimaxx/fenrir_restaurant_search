@@ -8,6 +8,12 @@
         android:label="fenrir_restaurant_search"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        
+        <!-- Google Maps APIキーの設定 -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyD9d2ran8yn3j_2fkO3lZ4Lp88zYK2VjRs" />
+
 // ... existing code ...
         <activity
             android:name=".MainActivity"
@@ -46,6 +52,16 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- 電話アプリ連携のためのクエリ -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tel" />
+        </intent>
+        <!-- 地図アプリ連携のためのクエリ -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 </manifest>

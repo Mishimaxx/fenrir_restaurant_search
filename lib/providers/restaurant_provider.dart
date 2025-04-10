@@ -14,6 +14,7 @@ class Restaurant {
   final String imageUrl;
   final double latitude;
   final double longitude;
+  final String tel;
 
   Restaurant({
     required this.id,
@@ -24,10 +25,10 @@ class Restaurant {
     required this.imageUrl,
     required this.latitude,
     required this.longitude,
+    required this.tel,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
-    // 写真URLの取得ロジックを安全に
     String imageUrl = '';
     try {
       final photo = json['photo'];
@@ -42,7 +43,6 @@ class Restaurant {
       imageUrl = '';
     }
 
-    // 緯度経度の安全な取得
     double lat = 0.0;
     double lng = 0.0;
     try {
@@ -63,6 +63,7 @@ class Restaurant {
       imageUrl: imageUrl,
       latitude: lat,
       longitude: lng,
+      tel: json['tel']?.toString() ?? '',
     );
   }
 }
@@ -74,7 +75,6 @@ class RestaurantProvider with ChangeNotifier {
   final Dio _dio = Dio();
 
   RestaurantProvider() {
-    // Android端末の場合、証明書チェックを無効化（開発用）
     if (!kIsWeb && kDebugMode && Platform.isAndroid) {
       (_dio.httpClientAdapter as DefaultHttpClientAdapter)
           .onHttpClientCreate = (client) {
@@ -83,13 +83,11 @@ class RestaurantProvider with ChangeNotifier {
       };
     }
 
-    // デバッグモードの場合、Dioのログを有効化
     if (kDebugMode) {
       _dio.interceptors.add(
         LogInterceptor(requestBody: true, responseBody: true, error: true),
       );
 
-      // エラーインターセプター
       _dio.interceptors.add(
         InterceptorsWrapper(
           onError: (DioException e, ErrorInterceptorHandler handler) {
@@ -114,7 +112,6 @@ class RestaurantProvider with ChangeNotifier {
     _error = '';
     notifyListeners();
 
-    // Webブラウザでの実行は制限
     if (kIsWeb) {
       _error = 'ウェブブラウザでは直接APIアクセスできません。AndroidかiOSアプリで利用してください。';
       _isLoading = false;
@@ -125,40 +122,48 @@ class RestaurantProvider with ChangeNotifier {
     try {
       const apiKey = '2b8ccdc9ab7af127';
       final url = 'https://webservice.recruit.co.jp/hotpepper/gourmet/v1/';
-
       print('リクエスト先URL: $url');
+
+      int rangeValue;
+      if (radius <= 300) {
+        rangeValue = 1;
+      } else if (radius <= 500) {
+        rangeValue = 2;
+      } else if (radius <= 1000) {
+        rangeValue = 3;
+      } else if (radius <= 2000) {
+        rangeValue = 4;
+      } else {
+        rangeValue = 5;
+      }
 
       final queryParameters = {
         'key': apiKey,
         'lat': latitude.toString(),
         'lng': longitude.toString(),
-        'range': radius.toString(),
+        'range': rangeValue.toString(),
         'format': 'json',
-        'count': '100', // 結果の最大数
+        'count': '100',
       };
 
       if (kDebugMode) {
         print('クエリパラメータ: $queryParameters');
+        print('検索半径: $radius メートル → API range値: $rangeValue');
       }
 
       final response = await _dio.get(
         url,
         queryParameters: queryParameters,
         options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': '*/*', // より広い受け入れ形式
-          },
+          headers: {'Content-Type': 'application/json', 'Accept': '*/*'},
           receiveTimeout: const Duration(seconds: 30),
           sendTimeout: const Duration(seconds: 30),
-          // 明示的なレスポンスタイプの指定を変更（自動判別させる）
-          responseType: ResponseType.plain, // 生のテキストとして受け取る
+          responseType: ResponseType.plain,
         ),
       );
 
       print('レスポンスステータス: ${response.statusCode}');
 
-      // レスポンスを詳細に検証
       if (kDebugMode) {
         print('レスポンスタイプ: ${response.data.runtimeType}');
 
@@ -177,10 +182,8 @@ class RestaurantProvider with ChangeNotifier {
 
       if (response.data != null) {
         try {
-          // 安全にJSONをパース
           final jsonData = _safeJsonDecode(response.data);
 
-          // データ構造を検証
           if (_hasValidResults(jsonData)) {
             final shopData = jsonData['results']['shop'];
 
@@ -198,7 +201,6 @@ class RestaurantProvider with ChangeNotifier {
                 _error = 'レストランデータの変換に失敗しました: $e';
                 print('変換エラー: $e');
 
-                // エラー情報の詳細ログ
                 if (kDebugMode && shopData.isNotEmpty) {
                   print('最初の店舗データサンプル:');
                   print(shopData.first);
@@ -237,7 +239,6 @@ class RestaurantProvider with ChangeNotifier {
       } else {
         _error = 'ネットワークエラーが発生しました: ${e.message}';
 
-        // 詳細なデバッグ情報
         if (kDebugMode) {
           print('エラータイプ: ${e.type}');
           print('エラーメッセージ: ${e.message}');
@@ -256,7 +257,6 @@ class RestaurantProvider with ChangeNotifier {
     }
   }
 
-  // 安全なJSONパース
   dynamic _safeJsonDecode(dynamic data) {
     if (data == null) return null;
 
@@ -271,7 +271,6 @@ class RestaurantProvider with ChangeNotifier {
     }
   }
 
-  // データ構造の安全な確認
   bool _hasValidResults(dynamic data) {
     try {
       if (data == null) {
@@ -279,13 +278,11 @@ class RestaurantProvider with ChangeNotifier {
         return false;
       }
 
-      // データ型の検証（Map型である必要がある）
       if (!(data is Map)) {
         print('データがMap型ではありません: ${data.runtimeType}');
         return false;
       }
 
-      // 'results'キーの存在確認
       if (!data.containsKey('results')) {
         print("データに'results'キーがありません");
         return false;
@@ -293,29 +290,17 @@ class RestaurantProvider with ChangeNotifier {
 
       final results = data['results'];
 
-      // resultsがMap型である必要がある
       if (!(results is Map)) {
         print("'results'がMap型ではありません: ${results.runtimeType}");
         return false;
       }
-
-      // 'shop'キーの存在確認
       if (!results.containsKey('shop')) {
         print("'results'に'shop'キーがありません");
         return false;
       }
-
-      final shop = results['shop'];
-
-      // shopはリスト型である必要がある
-      if (!(shop is List)) {
-        print("'shop'がList型ではありません: ${shop.runtimeType}");
-        return false;
-      }
-
       return true;
     } catch (e) {
-      print('データ構造検証エラー: $e');
+      print('データ構造確認エラー: $e');
       return false;
     }
   }
