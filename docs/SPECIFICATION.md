@@ -51,7 +51,6 @@ Google Maps Flutter（地図表示）
 provider（状態管理）
 geolocator（位置情報取得）
 cached_network_image（画像キャッシュ処理）
-url_launcher（電話・地図アプリ連携）
 
 ### 技術面でアドバイスして欲しいポイント
 レストランの一覧表示をより使いやすく、見やすくしたい。現在はカード形式で表示している。
