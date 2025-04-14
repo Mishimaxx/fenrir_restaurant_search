@@ -47,13 +47,13 @@ class _ResultScreenState extends State<ResultScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
         elevation: 0,
         title: const Text('検索結果'),
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: theme.colorScheme.primary.withOpacity(0.2)),
+            child: Container(color: Colors.transparent),
           ),
         ),
         actions: [
@@ -66,24 +66,26 @@ class _ResultScreenState extends State<ResultScreen>
           ),
         ],
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Consumer<RestaurantProvider>(
-          builder: (context, provider, child) {
-            if (provider.isLoading) {
-              return _buildLoadingState();
-            }
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Consumer<RestaurantProvider>(
+            builder: (context, provider, child) {
+              if (provider.isLoading) {
+                return _buildLoadingState();
+              }
 
-            if (provider.error.isNotEmpty) {
-              return _buildErrorState(provider.error, theme);
-            }
+              if (provider.error.isNotEmpty) {
+                return _buildErrorState(provider.error, theme);
+              }
 
-            if (provider.restaurants.isEmpty) {
-              return _buildEmptyState(theme);
-            }
+              if (provider.restaurants.isEmpty) {
+                return _buildEmptyState(theme);
+              }
 
-            return _buildResultsList(provider, theme);
-          },
+              return _buildResultsList(provider, theme);
+            },
+          ),
         ),
       ),
     );
@@ -241,129 +243,125 @@ class _ResultScreenState extends State<ResultScreen>
   }
 
   Widget _buildResultsList(RestaurantProvider provider, ThemeData theme) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [theme.colorScheme.primary.withOpacity(0.05), Colors.white],
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.restaurant,
-                        color: theme.colorScheme.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${provider.restaurants.length}件のお店が見つかりました',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'タップして詳細を確認',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return Column(
+      children: [
+        // 検索結果の件数表示（常に表示）
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          margin: const EdgeInsets.only(
+            top: 16,
+            left: 16,
+            right: 16,
+            bottom: 4,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.primary.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.restaurant,
+                color: theme.colorScheme.primary,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${provider.restaurants.length}件のレストランが見つかりました',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+        if (provider.lastUsedKeyword != null &&
+            provider.lastUsedKeyword!.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            margin: const EdgeInsets.only(
+              top: 4,
+              left: 16,
+              right: 16,
+              bottom: 4,
             ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, color: theme.colorScheme.primary, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '検索キーワード: 「${provider.lastUsedKeyword}」',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
-                itemCount: provider.restaurants.length,
-                itemBuilder: (context, index) {
-                  final restaurant = provider.restaurants[index];
+              ],
+            ),
+          ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            itemCount: provider.restaurants.length,
+            itemBuilder: (context, index) {
+              final restaurant = provider.restaurants[index];
 
-                  // アニメーションを適用
-                  return AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      final delay = index * 0.2;
-                      final start = delay;
-                      final end = delay + 0.8;
+              // アニメーションを適用
+              return AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  final delay = index * 0.2;
+                  final start = delay;
+                  final end = delay + 0.8;
 
-                      final animation = Tween<double>(
-                        begin: 0.0,
-                        end: 1.0,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _animationController,
-                          curve: Interval(
-                            start.clamp(0.0, 1.0),
-                            end.clamp(0.0, 1.0),
-                            curve: Curves.easeOut,
-                          ),
-                        ),
-                      );
+                  final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: _animationController,
+                      curve: Interval(
+                        start.clamp(0.0, 1.0),
+                        end.clamp(0.0, 1.0),
+                        curve: Curves.easeOut,
+                      ),
+                    ),
+                  );
 
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0, 0.2),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: RestaurantCard(restaurant: restaurant),
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
                   );
                 },
-              ),
-            ),
-          ],
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: RestaurantCard(restaurant: restaurant),
+                ),
+              );
+            },
+          ),
         ),
-      ),
+      ],
     );
   }
 }

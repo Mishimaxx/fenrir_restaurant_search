@@ -18,6 +18,7 @@ class _SearchScreenState extends State<SearchScreen>
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  final TextEditingController _keywordController = TextEditingController();
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _keywordController.dispose();
     super.dispose();
   }
 
@@ -100,11 +102,13 @@ class _SearchScreenState extends State<SearchScreen>
     };
 
     final searchRadius = radiusMap[_radius.toInt()] ?? 2000;
+    final keyword = _keywordController.text.trim();
 
     context.read<RestaurantProvider>().searchRestaurants(
       latitude: _currentPosition!.latitude,
       longitude: _currentPosition!.longitude,
       radius: searchRadius,
+      keyword: keyword.isNotEmpty ? keyword : null,
     );
 
     Navigator.pushNamed(context, '/results');
@@ -118,13 +122,13 @@ class _SearchScreenState extends State<SearchScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
         elevation: 0,
         title: const Text('グルメサーチ'),
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: theme.colorScheme.primary.withOpacity(0.2)),
+            child: Container(color: Colors.transparent),
           ),
         ),
         actions: [
@@ -161,22 +165,35 @@ class _SearchScreenState extends State<SearchScreen>
                       style: textTheme.titleLarge,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    if (_currentPosition != null) _buildLocationCard(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_currentPosition != null) _buildLocationCard(),
 
-                    const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                    _buildRadiusCard(theme, textTheme),
+                            _buildRadiusCard(theme, textTheme),
 
-                    const Spacer(),
+                            const SizedBox(height: 24),
+
+                            _buildKeywordCard(theme, textTheme),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
 
                     if (_isLoading)
                       const Center(child: CircularProgressIndicator())
                     else
                       _buildSearchButton(theme),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -364,6 +381,93 @@ class _SearchScreenState extends State<SearchScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildKeywordCard(ThemeData theme, TextTheme textTheme) {
+    return Card(
+      elevation: 6,
+      shadowColor: Colors.black.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, Colors.grey.shade50],
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('キーワード検索', style: textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            TextField(
+              controller: _keywordController,
+              decoration: InputDecoration(
+                hintText: 'キーワードを入力',
+                labelText: 'お店・料理などのキーワード',
+                prefixIcon: const Icon(Icons.restaurant_menu),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => _keywordController.clear(),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: theme.colorScheme.primary),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary.withOpacity(0.5),
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _searchRestaurants(),
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '例: ラーメン、居酒屋、イタリアン、カフェ など',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

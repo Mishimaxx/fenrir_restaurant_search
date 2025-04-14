@@ -73,6 +73,7 @@ class RestaurantProvider with ChangeNotifier {
   bool _isLoading = false;
   String _error = '';
   final Dio _dio = Dio();
+  String? _lastUsedKeyword;
 
   RestaurantProvider() {
     if (!kIsWeb && kDebugMode && Platform.isAndroid) {
@@ -102,14 +103,17 @@ class RestaurantProvider with ChangeNotifier {
   List<Restaurant> get restaurants => _restaurants;
   bool get isLoading => _isLoading;
   String get error => _error;
+  String? get lastUsedKeyword => _lastUsedKeyword;
 
   Future<void> searchRestaurants({
     required double latitude,
     required double longitude,
     required int radius,
+    String? keyword,
   }) async {
     _isLoading = true;
     _error = '';
+    _lastUsedKeyword = keyword;
     notifyListeners();
 
     if (kIsWeb) {
@@ -146,9 +150,16 @@ class RestaurantProvider with ChangeNotifier {
         'count': '100',
       };
 
+      if (keyword != null && keyword.isNotEmpty) {
+        queryParameters['keyword'] = keyword;
+      }
+
       if (kDebugMode) {
         print('クエリパラメータ: $queryParameters');
         print('検索半径: $radius メートル → API range値: $rangeValue');
+        if (keyword != null && keyword.isNotEmpty) {
+          print('検索キーワード: $keyword');
+        }
       }
 
       final response = await _dio.get(

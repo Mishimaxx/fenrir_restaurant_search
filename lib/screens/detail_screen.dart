@@ -166,10 +166,10 @@ class _DetailScreenState extends State<DetailScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.5),
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.3),
                   ],
-                  stops: const [0.7, 1.0],
+                  stops: const [0.3, 1.0],
                 ),
               ),
             ),
@@ -182,14 +182,14 @@ class _DetailScreenState extends State<DetailScreen>
               // AppBar
               SliverAppBar(
                 expandedHeight: 120,
-                backgroundColor: Colors.transparent,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.7),
                 elevation: 0,
                 pinned: true,
                 stretch: true,
                 flexibleSpace: ClipRect(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(color: Colors.black.withOpacity(0.1)),
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(color: Colors.transparent),
                   ),
                 ),
                 leading: IconButton(
@@ -203,27 +203,7 @@ class _DetailScreenState extends State<DetailScreen>
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
-                actions: [
-                  IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.share, color: Colors.white),
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('シェア機能は準備中です'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                actions: [],
               ),
 
               // 店舗名
@@ -240,13 +220,28 @@ class _DetailScreenState extends State<DetailScreen>
                     );
                   },
                   child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.4),
+                          Colors.black.withOpacity(0.3),
+                        ],
+                        stops: const [0.2, 1.0],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                    ),
                     padding: EdgeInsets.only(
                       top:
                           size.height * 0.4 -
                           120, // 背景画像の高さから最初のSliverAppBarの高さを引く
                       left: 24,
                       right: 24,
-                      bottom: 20,
+                      bottom: 24,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,16 +252,27 @@ class _DetailScreenState extends State<DetailScreen>
                           style: textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                             shadows: [
                               const Shadow(
+                                offset: Offset(0, 2),
+                                blurRadius: 4,
+                                color: Colors.black87,
+                              ),
+                              const Shadow(
                                 offset: Offset(0, 1),
-                                blurRadius: 3,
-                                color: Colors.black54,
+                                blurRadius: 2,
+                                color: Colors.black,
+                              ),
+                              const Shadow(
+                                offset: Offset(1, 1),
+                                blurRadius: 1,
+                                color: Colors.black,
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         // アクセス
                         Row(
                           children: [
@@ -274,19 +280,37 @@ class _DetailScreenState extends State<DetailScreen>
                               Icons.directions,
                               color: Colors.white,
                               size: 18,
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(1, 1),
+                                  blurRadius: 2,
+                                  color: Colors.black,
+                                ),
+                              ],
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 restaurant.access,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
+                                  fontWeight: FontWeight.w500,
                                   shadows: [
-                                    Shadow(
+                                    const Shadow(
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4,
+                                      color: Colors.black,
+                                    ),
+                                    const Shadow(
                                       offset: Offset(0, 1),
-                                      blurRadius: 3,
-                                      color: Colors.black54,
+                                      blurRadius: 2,
+                                      color: Colors.black87,
+                                    ),
+                                    const Shadow(
+                                      offset: Offset(1, 1),
+                                      blurRadius: 1,
+                                      color: Colors.black,
                                     ),
                                   ],
                                 ),
@@ -314,17 +338,36 @@ class _DetailScreenState extends State<DetailScreen>
                     );
                   },
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(32),
-                        topRight: Radius.circular(32),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.25),
+                          blurRadius: 15,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.only(top: 24, bottom: 24),
+                    padding: const EdgeInsets.only(top: 20, bottom: 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // 小さな水平線を中央に配置（プルアップハンドルの視覚効果）
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[350],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
                         // 詳細情報セクション
                         _buildInfoSection(
                           context,
@@ -333,7 +376,7 @@ class _DetailScreenState extends State<DetailScreen>
                           content: restaurant.address,
                           theme: theme,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
                         _buildInfoSection(
                           context,
@@ -342,7 +385,7 @@ class _DetailScreenState extends State<DetailScreen>
                           content: restaurant.openTime,
                           theme: theme,
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 20),
 
                         // 電話番号（あれば表示）
                         if (restaurant.tel.isNotEmpty) ...[
@@ -353,12 +396,12 @@ class _DetailScreenState extends State<DetailScreen>
                             content: restaurant.tel,
                             theme: theme,
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 20),
                         ],
 
                         // 地図と位置情報
                         _buildMapSection(context, restaurant, theme),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 24),
 
                         // アクションボタン
                         Padding(
@@ -416,16 +459,28 @@ class _DetailScreenState extends State<DetailScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+                child: Icon(
+                  icon,
+                  color: theme.colorScheme.primary.withOpacity(0.9),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 title,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary.withOpacity(0.8),
                 ),
               ),
             ],
@@ -434,13 +489,24 @@ class _DetailScreenState extends State<DetailScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[200]!, width: 1),
+              border: Border.all(color: Colors.grey[300]!, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Text(
               content,
-              style: const TextStyle(fontSize: 15, height: 1.5),
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
